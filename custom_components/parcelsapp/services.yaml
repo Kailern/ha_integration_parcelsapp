@@ -1,17 +1,17 @@
 track_package:
   name: Track Package
-  description: Track a new package
+  description: Track a new package. Supports templates for dynamic values.
   fields:
     tracking_id:
       name: Tracking ID
-      description: The tracking ID of the package
+      description: The tracking ID of the package (supports templates)
       example: "ABC123456789"
       required: true
       selector:
         text:
     name:
       name: Sensor Name
-      description: Optional name for the sensor (default is 'Parcel <TrackingID>')
+      description: Optional name for the sensor (supports templates). Default is 'Parcel <TrackingID>'.
       example: "My Amazon Package"
       required: false
       selector:
@@ -19,11 +19,11 @@ track_package:
 
 remove_package:
   name: Remove Package
-  description: Remove a tracked package
+  description: Remove a tracked package. Supports templates for dynamic values.
   fields:
     tracking_id:
       name: Tracking ID
-      description: The tracking ID of the package to remove
+      description: The tracking ID of the package to remove (supports templates)
       example: "ABC123456789"
       required: true
       selector:

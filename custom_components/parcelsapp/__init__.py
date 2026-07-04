@@ -1,21 +1,24 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.template import Template
+import voluptuous as vol
 
 from .const import DOMAIN, SERVICE_TRACK_PACKAGE, SERVICE_REMOVE_PACKAGE
 from .coordinator import ParcelsAppCoordinator
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.BUTTON]
 
+# Schémas pour les services (avec support des templates)
+TRACK_PACKAGE_SCHEMA = vol.Schema({
+    vol.Required("tracking_id"): cv.template,
+    vol.Optional("name"): cv.template,
+})
 
-@callback
-def _async_render_template(hass: HomeAssistant, template: Template | str) -> str:
-    """Render a template if it is a Template object, otherwise return as-is."""
-    if isinstance(template, Template):
-        return template.async_render(variables={"hass": hass}, parse_result=False)
-    return template
+REMOVE_PACKAGE_SCHEMA = vol.Schema({
+    vol.Required("tracking_id"): cv.template,
+})
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -31,32 +34,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         tracking_id = call.data["tracking_id"]
         name = call.data.get("name")
 
-        # Render templates if they are Template objects
-        tracking_id = await hass.async_add_executor_job(
-            _async_render_template, hass, tracking_id
-        )
-        if name is not None:
-            name = await hass.async_add_executor_job(
-                _async_render_template, hass, name
-            )
-
         await coordinator.track_package(tracking_id, name)
         async_dispatcher_send(hass, f"{DOMAIN}_new_package", tracking_id)
 
-    hass.services.async_register(DOMAIN, SERVICE_TRACK_PACKAGE, handle_track_package)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_TRACK_PACKAGE,
+        handle_track_package,
+        schema=TRACK_PACKAGE_SCHEMA,
+    )
 
     async def handle_remove_package(call: ServiceCall) -> None:
         tracking_id = call.data["tracking_id"]
-
-        # Render template if it is a Template object
-        tracking_id = await hass.async_add_executor_job(
-            _async_render_template, hass, tracking_id
-        )
-
         await coordinator.remove_package(tracking_id)
         async_dispatcher_send(hass, f"{DOMAIN}_remove_package", tracking_id)
 
-    hass.services.async_register(DOMAIN, SERVICE_REMOVE_PACKAGE, handle_remove_package)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REMOVE_PACKAGE,
+        handle_remove_package,
+        schema=REMOVE_PACKAGE_SCHEMA,
+    )
 
     return True
 
